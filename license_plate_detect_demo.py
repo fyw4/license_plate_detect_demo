@@ -47,4 +47,19 @@ contours = sorted(contours, key = cv2.contourArea, reverse = True)[:10]
 # 画轮廓
 cv2.drawContours(img, contours, -1, [0, 255, 0])
 
+for c in contours:
+    # 排除超大的区域的轮廓， contourArea轮廓面积
+    if cv2.contourArea(c) > 1024 * 768 * 0.5:
+        continue
+
+    #计算周长， True 轮廓是闭合
+    peri = cv2.arcLength(c, True)
+
+    # 多边形近似处理 控制逼近精度
+    approx = cv2.approxPolyDP(c, 0.018*peri, True)
+
+    # 如果逼近后4个点，很有可能是矩形轮廓
+    if len(approx) == 4:
+        cv2.drawContours(img, [approx], -1, (0, 0, 255), 2)
+
 show_image("img", img)
