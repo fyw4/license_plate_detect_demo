@@ -1,6 +1,8 @@
 import cv2
 import numpy as np
 
+screenCnt = None
+
 def show_image(desc, image):
     cv2.imshow(desc, image)
     cv2.waitKey(0)
@@ -14,6 +16,33 @@ img = cv2.imread("test.jpg")
 if img is None:
     print("无法加载图像，请检查文件路径")
     exit()
+
+'''
+判断主色调
+'''
+def reg_area_color(image):
+    #BGR -> HSV
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+
+    #开运算（先腐蚀再膨胀） 去除小的干扰块，保留大的色块
+    kernel = np.ones((35, 35), np.uint8)
+    open = cv2.morphologyEx(hsv, cv2.MORPH_OPEN, kernel)
+
+    #直方图（对图像的H通道进行色调统计，看看哪个颜色出现的多） [opem]输入图像 H 0- 179
+    hist = cv2.calcHist([open], [0], None, [180], [0, 180])
+
+    # 找到最大的像素数量
+    hist_max = np.where(hist == np.max(hist))
+
+    # 判断颜色范围
+    if 0 < hist_max[0] < 10: #红色
+        res_color = "red"
+    elif 100 < hist_max[0] < 124:
+        res_color = "blue"
+    else:
+        res_color = "unknown"
+
+    return res_color
 
 # 调整图片大小
 img = cv2.resize(img, (1024, 800))
@@ -31,12 +60,8 @@ gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 # 正确的双边滤波调用
 filtered = cv2.bilateralFilter(gray, 13, 15, 15)
 
-# show_image("gray", filtered)
-
 # 边缘检测 canny边缘检测 第一个参数：输入图像 第二个参数：低阈值 第三个参数：高阈值
 edges = cv2.Canny(filtered, 30, 200)
-
-# show_image("edges", edges)
 
 # 寻找轮廓 CHAIN_APPROX_SIMPLE保留轮廓的端点信息
 contours, _ = cv2.findContours(edges.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -45,7 +70,7 @@ contours, _ = cv2.findContours(edges.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIM
 contours = sorted(contours, key = cv2.contourArea, reverse = True)[:10]
 
 # 画轮廓
-cv2.drawContours(img, contours, -1, [0, 255, 0])
+cv2.drawContours(img, contours, -1, [0, 255, 0], 2)
 
 for c in contours:
     # 排除超大的区域的轮廓， contourArea轮廓面积
@@ -60,6 +85,15 @@ for c in contours:
 
     # 如果逼近后4个点，很有可能是矩形轮廓
     if len(approx) == 4:
-        cv2.drawContours(img, [approx], -1, (0, 0, 255), 2)
+
+        #最小的外接矩形
+        x, y, w, h = cv2.boundingRect(approx)
+        crop_imgage = img[y : y + h, x : x + w]
+        if "blue" == reg_area_color(crop_imgage):
+            screenCnt = approx
+            break
+
+if screenCnt is not None:
+    cv2.drawContours(img, [screenCnt], -1, [0, 0, 255], 2)
 
 show_image("img", img)
