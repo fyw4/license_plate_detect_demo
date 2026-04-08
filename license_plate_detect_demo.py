@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from paddleocr import TextRecognition
 
 screenCnt = None
 
@@ -117,5 +118,14 @@ cv2.bitwise_and(img, img, mask = mask)
 (bottomx, bottomy) = (np.max(x), np.max(y))
 
 cropped = img[topx:bottomx, topy:bottomy]
+
+#创建文本ocr model_name模型文字
+model = TexRecognition(model_name = "PP-OCRv5_server_rec")
+#文本识别
+output = model.predict(input = " general_ocr_rec_001.png", batch_size = 1)
+for res in output:
+    res.print()
+    res.save_to_img(save_path = "./output/")
+    res.save_to_json(save_path = "./output/res/json")
 
 show_image("cropped", cropped)
