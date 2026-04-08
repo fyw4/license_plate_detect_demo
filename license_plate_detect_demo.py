@@ -37,8 +37,10 @@ def reg_area_color(image):
     # 判断颜色范围
     if 0 < hist_max[0] < 10: #红色
         res_color = "red"
-    elif 100 < hist_max[0] < 124:
+    elif 100 < hist_max[0] < 124: #蓝色
         res_color = "blue"
+    elif 35 < hist_max[0] < 85: #绿色
+        res_color = "green"
     else:
         res_color = "unknown"
 
@@ -92,8 +94,28 @@ for c in contours:
         if "blue" == reg_area_color(crop_imgage):
             screenCnt = approx
             break
+        elif "green" == reg_area_color(crop_imgage):
+            screenCnt = approx
+            break
 
 if screenCnt is not None:
     cv2.drawContours(img, [screenCnt], -1, [0, 0, 255], 2)
 
-show_image("img", img)
+#遮罩
+mask = np.zeros(gray.shape, np.uint8)
+cv2.drawContours(mask, [screenCnt], 0, 255, -1)
+
+
+# 图像位运算
+cv2.bitwise_and(img, img, mask = mask)
+
+# 图像裁剪
+(x, y) = np.where(mask == 255)
+
+# 左上方 最左边
+(topx, topy) = (np.min(x), np.min(y))
+(bottomx, bottomy) = (np.max(x), np.max(y))
+
+cropped = img[topx:bottomx, topy:bottomy]
+
+show_image("cropped", cropped)
